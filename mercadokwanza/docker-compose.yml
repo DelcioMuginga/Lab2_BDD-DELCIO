@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # ── NÓ 1: LUANDA — Servidor Principal (Master) ──
+  mysql-luanda:
+    image: mysql:8.0
+    container_name: no-luanda
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: kwanza2024
+      MYSQL_DATABASE: mercadokwanza
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./dados:/docker-entrypoint-initdb.d
+      - luanda_data:/var/lib/mysql
+    command: >
+      --server-id=1
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    networks:
+      - kwanza_net
+
+  # ── NÓ 2: BENGUELA — Réplica 1 (Slave) ──
+  mysql-benguela:
+    image: mysql:8.0
+    container_name: no-benguela
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: kwanza2024
+      MYSQL_DATABASE: mercadokwanza
+    ports:
+      - '3307:3306'
+    volumes:
+      - benguela_data:/var/lib/mysql
+    command: >
+      --server-id=2
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    networks:
+      - kwanza_net
+    depends_on:
+      - mysql-luanda
+
+  # ── NÓ 3: HUAMBO — Réplica 2 (Slave) ──
+  mysql-huambo:
+    image: mysql:8.0
+    container_name: no-huambo
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: kwanza2024
+      MYSQL_DATABASE: mercadokwanza
+    ports:
+      - '3308:3306'
+    volumes:
+      - huambo_data:/var/lib/mysql
+    command: >
+      --server-id=3
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    networks:
+      - kwanza_net
+    depends_on:
+      - mysql-luanda
+
+  # ── NÓ 4: MONGODB — Sistema NoSQL (usado na Parte 2) ──
+  mongodb:
+    image: mongo:7.0
+    container_name: mongo-kwanza
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: mercadokwanza
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - kwanza_net
+
+volumes:
+  luanda_data:
+  benguela_data:
+  huambo_data:
+  mongo_data:
+
+networks:
+  kwanza_net:
+    driver: bridge
